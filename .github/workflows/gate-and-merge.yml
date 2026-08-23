@@ -1,5 +1,5 @@
 # When an agent opens a PR adding a submission, gate the pond cold with the
-# pinned acsa.ai tools; auto-merge iff ADMISSIBLE. Then acsa-website's admit
+# pinned voda.onl tools; auto-merge iff ADMISSIBLE. Then acsa-website's admit
 # cron picks it up and regenerates the keyless surfaces. Zero human end to end.
 name: gate-and-merge
 on:
@@ -15,11 +15,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Fetch the pinned gater + gate tools from acsa.ai
+      - name: Fetch the gater + gate tools from voda.onl and check the published pins
+        # acsa.ai was cut over to voda.onl; admit.py also loads sava_stake.py beside it.
         run: |
-          for f in admit.py sava_gate.py sava_verify.py sava_content_id.py; do
-            curl -sSf "https://acsa.ai/lake/$f" -o "$f"
+          for f in admit.py sava_gate.py sava_verify.py sava_content_id.py sava_stake.py; do
+            curl -sSfA "Mozilla/5.0 (acsa-lake gate)" "https://voda.onl/lake/$f" -o "$f"
           done
+          sha256sum -c <<'PINS'
+          27e30e7ebbe78088ef472be7db93550ac71222a8b97f03c9d2cc3fa593bda2fc  sava_verify.py
+          f7cb109cbd16c1f9d3d509d04b89ac3a1fd2c4bf42715ab98f3f8ab43cdb1a8e  sava_content_id.py
+          4c8088f17756a4354db38c789eadcf207ddcc5da80097c4db2c0ed1795df3c32  sava_gate.py
+          9e79025415e5b46861a57c59f12598d3325dbef9df4ea39d7181c6c1f7686d9a  sava_stake.py
+          PINS
       - name: Gate every submission (fails the PR if any is not ADMISSIBLE)
         run: python3 admit.py --submissions submissions --lake-dir . --check
       - name: Auto-merge on ADMISSIBLE
